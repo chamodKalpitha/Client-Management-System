@@ -1,5 +1,6 @@
 import Dashboard from "./pages/Dashboard";
 import { ApolloClient, ApolloProvider, InMemoryCache } from "@apollo/client";
+import Login from "./pages/Login";
 
 // Solve : `Cache data may be lost when replacing the getClients field of a Query object` [Warning].
 const cache = new InMemoryCache({
@@ -30,7 +31,7 @@ function App() {
   return (
     <>
       <ApolloProvider client={client}>
-        <Dashboard />
+        <Login />
       </ApolloProvider>
     </>
   );
