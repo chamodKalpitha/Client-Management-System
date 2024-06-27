@@ -9,22 +9,16 @@ import {
 } from "graphql";
 import ClientModel from "../models/ClientModel.mjs";
 import ProjectModel from "../models/ProjectModel.mjs";
+import UserModel from "../models/UserModel.mjs";
+import hashedPassword from "../utilities/hashedPassword.mjs";
 
 const ClientType = new GraphQLObjectType({
   name: "Client",
   fields: {
-    id: {
-      type: GraphQLID,
-    },
-    name: {
-      type: GraphQLString,
-    },
-    email: {
-      type: GraphQLString,
-    },
-    phone: {
-      type: GraphQLString,
-    },
+    id: { type: GraphQLID },
+    name: { type: GraphQLString },
+    email: { type: GraphQLString },
+    phone: { type: GraphQLString },
   },
 });
 
@@ -44,11 +38,22 @@ const ProjectType = new GraphQLObjectType({
   },
 });
 
+const UserType = new GraphQLObjectType({
+  name: "User",
+  fields: {
+    id: { type: GraphQLID },
+    name: { type: GraphQLString },
+    password: { type: GraphQLString },
+    empId: { type: GraphQLString },
+    address: { type: GraphQLString },
+    role: { type: GraphQLString },
+  },
+});
+
 const RootQuery = new GraphQLObjectType({
   name: "Query",
   fields: {
     // Projects
-
     getProjects: {
       type: new GraphQLList(ProjectType),
       resolve: () => {
@@ -65,6 +70,7 @@ const RootQuery = new GraphQLObjectType({
         return ProjectModel.findById(args.id);
       },
     },
+
     // Clients
     getClients: {
       type: new GraphQLList(ClientType),
@@ -79,6 +85,24 @@ const RootQuery = new GraphQLObjectType({
       },
       resolve: (_, args) => {
         return ClientModel.findById(args.id);
+      },
+    },
+
+    //Users
+    getUsers: {
+      type: new GraphQLList(UserType),
+      resolve: () => {
+        return UserModel.find().select("-password");
+      },
+    },
+
+    getUserByEmail: {
+      type: UserType,
+      args: {
+        email: { type: GraphQLString },
+      },
+      resolve: (_, args) => {
+        return UserModel.findById(args.email).select("-password");
       },
     },
   },
@@ -184,6 +208,51 @@ const Mutation = new GraphQLObjectType({
       },
       resolve: (_, args) => {
         return ProjectModel.findByIdAndDelete(args.id);
+      },
+    },
+
+    // Users
+
+    registerUser: {
+      type: UserType,
+      args: {
+        name: { type: new GraphQLNonNull(GraphQLString) },
+        email: { type: new GraphQLNonNull(GraphQLString) },
+        password: { type: new GraphQLNonNull(GraphQLString) },
+        empId: { type: new GraphQLNonNull(GraphQLString) },
+        address: { type: GraphQLString },
+        roll: {
+          type: new GraphQLEnumType({
+            name: "UserRoll",
+            values: {
+              assistant: { value: "Assistant" },
+              manager: { value: "Manager" },
+            },
+          }),
+          defaultValue: "Assistant",
+        },
+      },
+      resolve: (_, args) => {
+        const hashedPassword = "123456";
+        const user = new UserModel({
+          name: args.name,
+          email: args.email,
+          password: hashedPassword,
+          empId: args.empId,
+          address: args.address,
+          roll: args.roll,
+        });
+        return user.save();
+      },
+    },
+
+    deleteUser: {
+      type: UserType,
+      args: {
+        email: { type: new GraphQLNonNull(GraphQLID) },
+      },
+      resolve: (_, args) => {
+        return UserModel.findByIdAndDelete(args.id);
       },
     },
   },
