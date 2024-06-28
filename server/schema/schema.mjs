@@ -10,7 +10,9 @@ import {
 import ClientModel from "../models/ClientModel.mjs";
 import ProjectModel from "../models/ProjectModel.mjs";
 import UserModel from "../models/UserModel.mjs";
-import hashedPassword from "../utilities/hashedPassword.mjs";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import "dotenv/config";
 
 const ClientType = new GraphQLObjectType({
   name: "Client",
@@ -42,6 +44,7 @@ const UserType = new GraphQLObjectType({
   name: "User",
   fields: {
     id: { type: GraphQLID },
+    email: { type: GraphQLString },
     name: { type: GraphQLString },
     password: { type: GraphQLString },
     empId: { type: GraphQLString },
@@ -213,6 +216,25 @@ const Mutation = new GraphQLObjectType({
 
     // Users
 
+    loginUser: {
+      type: UserType,
+      args: {
+        email: { type: new GraphQLNonNull(GraphQLString) },
+        password: { type: new GraphQLNonNull(GraphQLString) },
+      },
+      resolve: async (_, args) => {
+        const user = UserModel.find((user) => user.email === args.email);
+        if (user && (await bcrypt.compare(args.password, user.password))) {
+          return jwt.sign(
+            { id: user.id, email: user.email },
+            process.env.JWTSECRET,
+            { expiresIn: "1h" }
+          );
+        }
+        throw new Error("Invalid credentials");
+      },
+    },
+
     registerUser: {
       type: UserType,
       args: {
@@ -221,26 +243,39 @@ const Mutation = new GraphQLObjectType({
         password: { type: new GraphQLNonNull(GraphQLString) },
         empId: { type: new GraphQLNonNull(GraphQLString) },
         address: { type: GraphQLString },
-        roll: {
+        role: {
           type: new GraphQLEnumType({
-            name: "UserRoll",
+            name: "UserRole",
             values: {
-              assistant: { value: "Assistant" },
-              manager: { value: "Manager" },
+              ASSISTANT: { value: "Assistant" },
+              MANAGER: { value: "Manager" },
             },
           }),
           defaultValue: "Assistant",
         },
       },
-      resolve: (_, args) => {
-        const hashedPassword = "123456";
+      resolve: async (_, args) => {
+        const existingUser = await UserModel.findOne({ email: args.email });
+        const exisitngEmpId = await UserModel.findOne({ empId: args.empId });
+
+        if (existingUser) {
+          throw new Error("User with this email already exists.");
+        }
+
+        if (exisitngEmpId) {
+          throw new Error("User with this emp Id already exists.");
+        }
+
+        // Hash the password securely
+        const hashedPassword = await bcrypt.hash(args.password, 10);
+
         const user = new UserModel({
           name: args.name,
           email: args.email,
           password: hashedPassword,
           empId: args.empId,
           address: args.address,
-          roll: args.roll,
+          role: args.role,
         });
         return user.save();
       },
