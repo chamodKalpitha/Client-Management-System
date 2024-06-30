@@ -11,27 +11,26 @@ const opts = {
 export default passport.use(
   new Strategy(opts, async (jwtPayload, done) => {
     try {
-      console.log("Strategy opend");
-
+      console.log(jwtPayload);
       const user = await UserModel.findById(jwtPayload.id);
       if (user) return done(null, user);
       return done(null, false);
     } catch (error) {
-      return done(error, false);
+      return done(error, null);
     }
   })
 );
 
-passport.serializeUser((user, done) => {
-  done(null, user.id);
-});
+// passport.serializeUser((user, done) => {
+//   done(null, user.id);
+// });
 
-passport.deserializeUser(async (id, done) => {
-  try {
-    const findUser = await UserModel.findById(id);
-    if (!findUser) throw new Error("User not found");
-    done(null, findUser);
-  } catch (error) {
-    done(error, null);
-  }
-});
+// passport.deserializeUser(async (id, done) => {
+//   try {
+//     const findUser = await UserModel.findById(id);
+//     if (!findUser) throw new Error("User not found");
+//     done(null, findUser);
+//   } catch (error) {
+//     done(error, null);
+//   }
+// });

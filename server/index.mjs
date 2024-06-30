@@ -6,45 +6,53 @@ import "dotenv/config";
 import connectDB from "./config/db.mjs";
 import passport from "passport";
 import "./strategy/jwtStrategy.mjs";
-import { ExtractJwt } from "passport-jwt";
+import jwt from "jsonwebtoken";
+import UserModel from "./models/UserModel.mjs";
+import bcrypt from "bcrypt";
 
 const PORT = process.env.PORT || 4000;
 const app = express();
 connectDB();
 
+app.use(express.json());
 app.use(passport.initialize());
 
 app.use(cors());
 
-// app.use(
-//   "/graphql",
-//   createHandler({
-//     schema,
-//   })
-// );
-
 app.use(
-  "/graphql",
-  (req, res, next) => {
-    const tokenExtractor = ExtractJwt.fromAuthHeaderAsBearerToken();
-    const token = tokenExtractor(req);
-
-    console.log(token);
-    if (token)
-      return passport.authenticate("jwt", { session: false })(req, res, next);
-    console.log("printed");
-    next();
-  },
+  "/api/graphql",
+  passport.authenticate("jwt", { session: false }),
   createHandler({
     schema,
-    context: ({ req }) => ({
+    context: (req) => ({
       user: req.user, // Pass the user to the GraphQL context
     }),
   })
 );
 
+app.post("/api/auth/login", async (req, res) => {
+  console.log("run");
+  try {
+    const { email, password } = req.body;
+    const user = await UserModel.findOne({ email });
+    if (!user) return res.status(400).json({ message: "User not found" });
+    const isPasswordMatch = await bcrypt.compare(password, user.password);
+    if (!isPasswordMatch)
+      return res.status(400).json({ message: "Invalid password" });
+    const payload = { id: user.id };
+    console.log(user.id);
+    const token = jwt.sign(payload, process.env.JWTSECRET, {
+      expiresIn: "1h",
+    });
+    res.status(200).json({ message: "Login successful", token });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(
-    `Running a GraphQL API server at http://localhost:${PORT}/graphql`
+    `Running a GraphQL API server at http://localhost:${PORT}/api/graphql`
   );
 });

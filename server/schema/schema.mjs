@@ -11,7 +11,6 @@ import ClientModel from "../models/ClientModel.mjs";
 import ProjectModel from "../models/ProjectModel.mjs";
 import UserModel from "../models/UserModel.mjs";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
 import "dotenv/config";
 
 const ClientType = new GraphQLObjectType({
@@ -215,25 +214,6 @@ const Mutation = new GraphQLObjectType({
     },
 
     // Users
-
-    loginUser: {
-      type: UserType,
-      args: {
-        email: { type: new GraphQLNonNull(GraphQLString) },
-        password: { type: new GraphQLNonNull(GraphQLString) },
-      },
-      resolve: async (_, args) => {
-        const user = UserModel.find((user) => user.email === args.email);
-        if (user && (await bcrypt.compare(args.password, user.password))) {
-          return jwt.sign(
-            { id: user.id, email: user.email },
-            process.env.JWTSECRET,
-            { expiresIn: "1h" }
-          );
-        }
-        throw new Error("Invalid credentials");
-      },
-    },
 
     registerUser: {
       type: UserType,
