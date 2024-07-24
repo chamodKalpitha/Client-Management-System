@@ -8,6 +8,8 @@ export default function Clients() {
   if (loading) return <Spinner />;
   if (error) return <p>Something Went Wrong!</p>;
 
+  console.log(data);
+
   const tableRowElement = data.getClients.map((client) => (
     <ClientRow key={client.id} client={client} />
   ));

@@ -7,8 +7,26 @@ const ClientSchema = new mongoose.Schema({
   email: {
     type: String,
   },
-  phone: {
+  mobileNumber: {
     type: String,
+  },
+  hasWhatsapp: {
+    type: Boolean,
+  },
+  address: {
+    type: String,
+  },
+  createdBy: {
+    type: String,
+  },
+  registedDate: {
+    type: Date,
+  },
+  lastModifiedBy: {
+    type: String,
+  },
+  lastModifiedDate: {
+    type: Date,
   },
 });
 

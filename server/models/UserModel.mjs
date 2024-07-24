@@ -18,7 +18,12 @@ const UserSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ["Assistant", "Manager"],
+    enum: ["ASSISTANT", "MANAGER", "ADMIN"],
+  },
+  profilePicture: {
+    type: String,
+    default:
+      "https://cdn.vectorstock.com/i/500p/54/17/person-gray-photo-placeholder-man-vector-24005417.jpg",
   },
 });
 
