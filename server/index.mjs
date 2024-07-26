@@ -31,31 +31,31 @@ app.use(
   })
 );
 
-app.use(
-  "/api/graphql",
-  (req, res, next) => {
-    console.log("GraphQL endpoint hit");
-    next();
-  },
-  passport.authenticate("jwt", { session: false }),
-  createHandler({
-    schema,
-    context: (req) => req.raw.user,
-  })
-);
-
 // app.use(
 //   "/api/graphql",
 //   (req, res, next) => {
 //     console.log("GraphQL endpoint hit");
-//     console.log(req.body);
 //     next();
 //   },
+//   passport.authenticate("jwt", { session: false }),
 //   createHandler({
 //     schema,
 //     context: (req) => req.raw.user,
 //   })
 // );
+
+app.use(
+  "/api/graphql",
+  (req, res, next) => {
+    console.log("GraphQL endpoint hit");
+    console.log(req.body);
+    next();
+  },
+  createHandler({
+    schema,
+    context: (req) => req.raw.user,
+  })
+);
 
 app.post(
   "/api/auth/login",

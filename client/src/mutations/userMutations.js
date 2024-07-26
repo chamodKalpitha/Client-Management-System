@@ -33,3 +33,33 @@ export const DELETE_PROFILE_PICTURE = gql`
     }
   }
 `;
+
+export const UPDATE_PROFILE_PICTURE = gql`
+  mutation UpdateProfilePicture($id: ID!, $url: String!) {
+    UpdateProfilePicture(id: $id, url: $url) {
+      id
+      profilePicture
+    }
+  }
+`;
+
+export const UPDATE_USER_PROFILE = gql`
+  mutation UpdateUserProfile(
+    $id: ID!
+    $name: String
+    $address: String
+    $profilePicture: String
+  ) {
+    updateUserProfile(
+      id: $id
+      name: $name
+      address: $address
+      profilePicture: $profilePicture
+    ) {
+      id
+      name
+      address
+      profilePicture
+    }
+  }
+`;

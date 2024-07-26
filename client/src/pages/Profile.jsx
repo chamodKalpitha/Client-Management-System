@@ -1,17 +1,32 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useState, useContext } from "react";
 import axios from "axios";
+import { useMutation, useLazyQuery } from "@apollo/client";
 import { UserContext } from "../../context/userContext";
 import toast from "react-hot-toast";
+import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
 import ProfilePicture from "../components/ProfilePicture";
+import {
+  UPDATE_PROFILE_PICTURE,
+  DELETE_PROFILE_PICTURE,
+  UPDATE_USER_PROFILE,
+} from "../mutations/userMutations";
+import { GET_SIGNED_URL } from "../queries/userQueries";
 
 export default function Profile() {
-  const { user } = useContext(UserContext);
+  const { user, setUser } = useContext(UserContext);
   const navigate = useNavigate();
+  const [file, setFile] = useState(null);
   const [updatedUserData, setUpdatedUserData] = useState({
     name: user.name,
     address: user.address,
     profilePicture: user.profilePicture,
+  });
+
+  const [updateUserProfile] = useMutation(UPDATE_USER_PROFILE);
+  const [deleteProfilePicture] = useMutation(DELETE_PROFILE_PICTURE);
+  const [getSignedUrl] = useLazyQuery(GET_SIGNED_URL, {
+    fetchPolicy: "no-cache",
   });
 
   if (!user) {
@@ -20,26 +35,106 @@ export default function Profile() {
 
   const [dataChanged, setDataChanged] = useState(false);
 
-  useEffect(() => {
-    const changed =
-      updatedUserData.name === user.name &&
-      updatedUserData.address === user.address
-        ? false
-        : true;
-    setDataChanged(changed);
-  }, [updatedUserData]);
+  const handleFileChange = (file) => {
+    setFile(file);
+    setDataChanged(true);
+  };
 
-  const handleChangePassword = async (e) => {
-    e.preventDefault();
-    try {
-      await axios.post("/api/auth/forgot-password", { email: user.email });
-      toast.success(
-        "Password reset instructions sent! Please check your email."
-      );
-    } catch (error) {
-      console.log(error);
-      toast.error(error.response.data.error);
+  const handleDelete = () => {
+    deleteProfilePicture({
+      variables: {
+        id: user._id,
+      },
+    })
+      .then((response) => {
+        const newProfilePicture =
+          response.data.deleteProfilePicture.profilePicture;
+
+        setUser((prevUser) => ({
+          ...prevUser,
+          profilePicture: newProfilePicture,
+        }));
+
+        setDataChanged(false);
+
+        Swal.fire({
+          title: "Deleted!",
+          text: "Your profile picture has been deleted.",
+          icon: "success",
+          showConfirmButton: false,
+          timer: 1500,
+        });
+      })
+      .catch((error) => {
+        console.error(error);
+        Swal.fire({
+          title: "Error!",
+          text: error.message,
+          icon: "error",
+          showConfirmButton: true,
+        });
+      });
+  };
+
+  const handleSave = async () => {
+    if (file) {
+      try {
+        const { data: signedUrlData } = await getSignedUrl({
+          variables: { id: user._id, fileName: file.name }, // Include file name
+        });
+
+        if (!signedUrlData || !signedUrlData.requestS3URL) {
+          throw new Error("Failed to get signed URL");
+        }
+
+        const url = signedUrlData.requestS3URL.url;
+
+        const response = await axios.put(url, file, {
+          headers: {
+            "Content-Type": file.type, // Ensure correct content type
+          },
+        });
+
+        if (response.status === 200) {
+          const { data } = await updateUserProfile({
+            variables: {
+              id: user._id,
+              profilePicture: url.split("?")[0], // Save the URL without the query string
+            },
+          });
+
+          if (data && data.updateUserProfile) {
+            // Check if data and updateProfilePicture are defined
+            const newProfilePicture = data.updateUserProfile.profilePicture;
+
+            setUser((prevUser) => ({
+              ...prevUser,
+              profilePicture: newProfilePicture,
+            }));
+
+            Swal.fire({
+              title: "Uploaded!",
+              text: "Your profile picture has been updated.",
+              icon: "success",
+              showConfirmButton: false,
+              timer: 1500,
+            });
+          } else {
+            throw new Error("Failed to update profile picture");
+          }
+        }
+      } catch (error) {
+        console.error(error);
+        Swal.fire({
+          title: "Error!",
+          text: error.message,
+          icon: "error",
+          showConfirmButton: true,
+        });
+      }
     }
+
+    setDataChanged(false);
   };
 
   return (
@@ -50,6 +145,7 @@ export default function Profile() {
           <button
             type="submit"
             className="px-8 font-semibold text-sm bg-gray-700 p-3 rounded-lg text-white"
+            onClick={handleSave}
           >
             Save
           </button>
@@ -58,7 +154,10 @@ export default function Profile() {
       <div className=" flex justify-center">
         <div className=" w-1/2 flex-col">
           <div className="flex justify-center">
-            <ProfilePicture />
+            <ProfilePicture
+              onFileChange={handleFileChange}
+              onDelete={handleDelete}
+            />
           </div>
           <div>
             <label
@@ -79,6 +178,7 @@ export default function Profile() {
                 setUpdatedUserData((currentState) => {
                   return { ...currentState, name: e.target.value };
                 });
+                setDataChanged(true);
               }}
             />
           </div>
@@ -156,6 +256,7 @@ export default function Profile() {
                 setUpdatedUserData((currentState) => {
                   return { ...currentState, address: e.target.value };
                 });
+                setDataChanged(true);
               }}
             />
           </div>
@@ -163,7 +264,20 @@ export default function Profile() {
             <button
               type="submit"
               className="px-8 font-semibold text-sm bg-red-500 p-3 rounded-lg text-white"
-              onClick={handleChangePassword}
+              onClick={async (e) => {
+                e.preventDefault();
+                try {
+                  await axios.post("/api/auth/forgot-password", {
+                    email: user.email,
+                  });
+                  toast.success(
+                    "Password reset instructions sent! Please check your email."
+                  );
+                } catch (error) {
+                  console.log(error);
+                  toast.error(error.response.data.error);
+                }
+              }}
             >
               Change Password
             </button>

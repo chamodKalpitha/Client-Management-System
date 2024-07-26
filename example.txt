@@ -1,208 +1,58 @@
-const express = require('express');
-const { graphqlHTTP } = require('express-graphql');
-const { buildSchema } = require('graphql');
-const mongoose = require('mongoose');
-
-const app = express();
-const PORT = 4000;
-
-// Connect to MongoDB
-mongoose.connect('mongodb://localhost:27017/graphqlpagination', { useNewUrlParser: true, useUnifiedTopology: true });
-
-// Define Mongoose schema and model
-const itemSchema = new mongoose.Schema({
-  name: String,
-  createdAt: { type: Date, default: Date.now },
-});
-const Item = mongoose.model('Item', itemSchema);
-
-// Define GraphQL schema
-const schema = buildSchema(`
-  type Item {
-    id: ID!
-    name: String!
-    createdAt: String!
-  }
-
-  type PageInfo {
-    endCursor: String
-    hasNextPage: Boolean
-  }
-
-  type ItemEdge {
-    cursor: String
-    node: Item
-  }
-
-  type ItemConnection {
-    edges: [ItemEdge]
-    pageInfo: PageInfo
-    totalCount: Int
-    totalPages: Int
-    currentPage: Int
-    limit: Int
-  }
-
-  type Query {
-    items(first: Int, after: String): ItemConnection
-  }
-`);
-
-// Define resolvers
-const root = {
-  items: async ({ first = 10, after }) => {
-    const limit = first;
-    const query = {};
-    if (after) {
-      query._id = { $gt: after };
-    }
-
-    const totalCount = await Item.countDocuments({});
-    const items = await Item.find(query).sort({ _id: 1 }).limit(limit);
-    const edges = items.map(item => ({
-      cursor: item._id.toString(),
-      node: item,
-    }));
-    const endCursor = edges.length > 0 ? edges[edges.length - 1].cursor : null;
-    const hasNextPage = endCursor ? await Item.countDocuments({ _id: { $gt: endCursor } }) > 0 : false;
-    const totalPages = Math.ceil(totalCount / limit);
-    const currentPage = after ? Math.floor((await Item.find({ _id: { $lt: after } }).countDocuments()) / limit) + 1 : 1;
-
-    return {
-      edges,
-      pageInfo: {
-        endCursor,
-        hasNextPage,
-      },
-      totalCount,
-      totalPages,
-      currentPage,
-      limit,
-    };
-  },
-};
-
-// Set up GraphQL endpoint
-app.use('/graphql', graphqlHTTP({
-  schema: schema,
-  rootValue: root,
-  graphiql: true,
-}));
-
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}/graphql`);
-});
-
-
-
-
-
-
-
-
-{
-  items(first: 10) {
-    edges {
-      cursor
-      node {
-        id
-        name
-      }
-    }
-    pageInfo {
-      endCursor
-      hasNextPage
-    }
-    totalCount
-    totalPages
-    currentPage
-    limit
-  }
-}
-
-
-
-// src/PaginatedItems.js
-import React, { useState } from 'react';
-import { useQuery, gql } from '@apollo/client';
-
-const GET_ITEMS = gql`
-  query GetItems($first: Int!, $after: String) {
-    items(first: $first, after: $after) {
-      edges {
-        cursor
-        node {
-          id
-          name
-        }
-      }
-      pageInfo {
-        endCursor
-        hasNextPage
-      }
-      totalCount
-      totalPages
-      currentPage
-      limit
-    }
-  }
-`;
-
-const PaginatedItems = () => {
-  const [first] = useState(10); // Number of items per page
-  const [after, setAfter] = useState(null); // Cursor for pagination
-
-  const { loading, error, data, fetchMore } = useQuery(GET_ITEMS, {
-    variables: { first, after },
-  });
-
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>Error: {error.message}</p>;
-
-  const { edges, pageInfo, totalCount, totalPages, currentPage, limit } = data.items;
-
-  return (
-    <div>
-      <h1>Paginated Items</h1>
-      <ul>
-        {edges.map(({ node }) => (
-          <li key={node.id}>{node.name}</li>
-        ))}
-      </ul>
-      <div>
-        <button
-          onClick={() => {
-            if (pageInfo.hasNextPage) {
-              fetchMore({
-                variables: { after: pageInfo.endCursor },
-                updateQuery: (previousResult, { fetchMoreResult }) => {
-                  if (!fetchMoreResult) return previousResult;
-                  return {
-                    items: {
-                      ...fetchMoreResult.items,
-                      edges: [
-                        ...previousResult.items.edges,
-                        ...fetchMoreResult.items.edges,
-                      ],
-                    },
-                  };
-                },
-              });
-            }
-          }}
-          disabled={!pageInfo.hasNextPage}
-        >
-          Load More
-        </button>
-      </div>
-      <div>
-        <p>Total Count: {totalCount}</p>
-        <p>Total Pages: {totalPages}</p>
-        <p>Current Page: {currentPage}</p>
-        <p>Limit: {limit}</p>
-      </div>
-    </div>
-  );
-};
-
-export default PaginatedItems;
+project-root/
+│
+├── src/
+│   ├── config/
+│   │   └── config.js              # Configuration files (e.g., environment variables)
+│   │
+│   ├── controllers/
+│   │   ├── auth.controller.js     # REST API controllers for authentication
+│   │   └── user.controller.js     # REST API controllers for user data
+│   │
+│   ├── graphql/
+│   │   ├── resolvers/
+│   │   │   ├── auth.resolver.js   # Resolvers for authentication
+│   │   │   ├── user.resolver.js   # Resolvers for user data
+│   │   │   └── index.js           # Combine all GraphQL resolvers
+│   │   │
+│   │   ├── typeDefs/
+│   │   │   ├── auth.typeDefs.js   # Type definitions for authentication
+│   │   │   ├── user.typeDefs.js   # Type definitions for user data
+│   │   │   └── index.js           # Combine all GraphQL type definitions
+│   │   │
+│   │   ├── queries/
+│   │   │   ├── auth.queries.js    # Queries for authentication
+│   │   │   ├── user.queries.js    # Queries for user data
+│   │   │   └── index.js           # Combine all GraphQL queries
+│   │   │
+│   │   ├── mutations/
+│   │   │   ├── auth.mutations.js  # Mutations for authentication
+│   │   │   ├── user.mutations.js  # Mutations for user data
+│   │   │   └── index.js           # Combine all GraphQL mutations
+│   │   │
+│   │   └── schema.js              # Combine typeDefs, queries, and mutations to create the schema
+│   │
+│   ├── models/
+│   │   └── user.model.js          # Database models (e.g., User model)
+│   │
+│   ├── routes/
+│   │   ├── auth.routes.js         # Authentication-related routes
+│   │   └── user.routes.js         # User-related routes
+│   │
+│   ├── services/
+│   │   └── auth.service.js        # Business logic for authentication
+│   │
+│   ├── validations/
+│   │   ├── auth.validation.js     # Joi validation schemas for authentication
+│   │   └── user.validation.js     # Joi validation schemas for user data
+│   │
+│   ├── utils/
+│   │   └── helpers.js             # Utility functions
+│   │
+│   ├── app.js                     # Express app setup
+│   ├── graphqlServer.js           # GraphQL server setup
+│   └── index.js                   # Entry point
+│
+├── .env                           # Environment variables
+├── .gitignore                     # Git ignore file
+├── package.json                   # NPM dependencies and scripts
+└── README.md                      # Project documentation

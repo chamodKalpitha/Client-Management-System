@@ -11,6 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "aws-sdk": "^2.1662.0",
     "bcrypt": "^5.1.1",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
@@ -19,9 +20,11 @@
     "graphiql": "^3.3.2",
     "graphql": "^16.8.2",
     "graphql-http": "^1.22.1",
+    "graphql-upload": "^16.0.2",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.4.3",
+    "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.14",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1"

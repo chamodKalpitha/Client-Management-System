@@ -13,6 +13,7 @@ import { dateScalar } from "./scalar.mjs";
 import ClientModel from "../models/ClientModel.mjs";
 import ProjectModel from "../models/ProjectModel.mjs";
 import UserModel from "../models/UserModel.mjs";
+import { generateUploadURL } from "../config/awsS3Config.mjs";
 import bcrypt from "bcrypt";
 import "dotenv/config";
 
@@ -87,6 +88,13 @@ const UserType = new GraphQLObjectType({
     address: { type: GraphQLString },
     role: { type: GraphQLString },
     profilePicture: { type: GraphQLString },
+  },
+});
+
+const s3UrlType = new GraphQLObjectType({
+  name: "S3Url",
+  fields: {
+    url: { type: GraphQLString },
   },
 });
 
@@ -191,6 +199,20 @@ const RootQuery = new GraphQLObjectType({
         return UserModel.findById(args.email).select("-password");
       },
     },
+
+    requestS3URL: {
+      type: s3UrlType,
+      args: {
+        id: { type: new GraphQLNonNull(GraphQLID) },
+        fileName: { type: new GraphQLNonNull(GraphQLString) }, // Added fileName argument
+      },
+      resolve: async (_, { id, fileName }) => {
+        const user = await UserModel.findById(id);
+        if (!user) throw new Error("User not found");
+        const url = await generateUploadURL(fileName);
+        return { url };
+      },
+    },
   },
 });
 
@@ -281,6 +303,27 @@ const Mutation = new GraphQLObjectType({
         if (!user) throw new Error("Client not found");
         user.profilePicture =
           "https://cdn.vectorstock.com/i/500p/54/17/person-gray-photo-placeholder-man-vector-24005417.jpg";
+        await user.save();
+        return user;
+      },
+    },
+
+    updateUserProfile: {
+      type: UserType,
+      args: {
+        id: { type: new GraphQLNonNull(GraphQLID) },
+        name: { type: GraphQLString },
+        address: { type: GraphQLString },
+        profilePicture: { type: GraphQLString },
+      },
+      resolve: async (_, { id, name, address, profilePicture }) => {
+        const user = await UserModel.findById(id);
+        if (!user) throw new Error("User not found");
+
+        if (name) user.name = name;
+        if (address) user.address = address;
+        if (profilePicture) user.profilePicture = profilePicture;
+
         await user.save();
         return user;
       },
