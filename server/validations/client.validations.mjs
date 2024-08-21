@@ -1,6 +1,6 @@
 import Joi from "joi";
 
-export const validateCreateClient = Joi.object({
+export const createClientSchema = Joi.object({
   name: Joi.string().empty().min(3).required().messages({
     "string.empty": "Name cannot be empty",
     "string.min": "Name must be at least 3 characters long",
@@ -27,7 +27,7 @@ export const validateCreateClient = Joi.object({
   abortEarly: false,
 });
 
-export const validateEditClient = Joi.object({
+export const editClientSchema = Joi.object({
   id: Joi.string().hex().length(24).messages({
     "string.hex": "Invalid Id",
     "string.length": "Invalid Id",

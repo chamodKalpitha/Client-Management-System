@@ -1,6 +1,6 @@
 import Joi from "joi";
 
-export const validateRegisterUser = Joi.object({
+export const registerUserSchema = Joi.object({
   name: Joi.string().empty().min(3).required().messages({
     "string.empty": "Name cannot be empty.",
     "string.min": "Name must be at least 3 characters long.",
